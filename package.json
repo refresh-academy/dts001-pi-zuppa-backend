@@ -18,9 +18,9 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "migrate": "ley",
     "start": "ts-node --transpileOnly index.ts",
-    "dev": "nodemon --exec ts-node --transpileOnly index.ts",
+    "dev": "nodemon --legacy-watch --ignore node_modules index.js",
     "test-db": "ts-node --transpileOnly testDb.ts",
-    "db:recreate": "ts-node --transpileOnly db_scripts/recreate_db.ts"
+    "db:recreate": "ts-node --transpileOnly db_scripts/recreate_db.js"
   },
 
   "dependencies": {

@@ -11,8 +11,6 @@ CREATE TABLE users (
     ruolo VARCHAR(20)
 );
 
-
-
 insert into  users (nome,cognome,telefono,
 username,password,email,livello_accesso,
 punto_distribuzione,ruolo)
@@ -43,16 +41,12 @@ id SERIAL PRIMARY KEY,
 
 );
 
-
-
 create table entities(
 id Serial primary key,
 nome Varchar (100) unique not null,
 telefono varchar (16) not null,
 via varchar(150) not null 
 );
-
-
 
 create table recipe (
 id Serial primary key,
@@ -77,7 +71,6 @@ nome Varchar (100) not null
 
 insert into point_distribution (nome)
 values ('Saffi'),('San Donato'),('Savena'),('Battiferro');
-
 
 create table giacenze (
 id serial primary key,

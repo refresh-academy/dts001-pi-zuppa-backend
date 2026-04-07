@@ -15,3 +15,8 @@ values ('Svetlana','Vitu','3896234393','svetty','panda',
 
 insert into point_distribution (nome)
 values ('Saffi'),('San Donato'),('Savena'),('Battiferro');
+
+insert into products (nome, articolo_peso, unita_collo, unita_bancale,
+codice_barre);
+values ('pomodoro preconfezionato 5 kg','true','1','6','1234567890128'),
+('biscotti confezionati 500 grammi','false','6','8','1231231232')

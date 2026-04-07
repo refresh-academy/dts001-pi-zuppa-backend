@@ -1,3 +1,3 @@
 ALTER TABLE users 
-MODIFY COLUMN punto_distribuzione VARCHAR(200),
-MODIFY COLUMN ruolo VARCHAR(200);
+MODIFY COLUMN punto_distribuzione VARCHAR(100),
+MODIFY COLUMN ruolo VARCHAR(100);

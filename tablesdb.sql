@@ -7,9 +7,25 @@ CREATE TABLE users (
     password VARCHAR (100) NOT NULL,
     email VARCHAR(100),
     livello_accesso VARCHAR(20) NOT NULL,
-    punto_distribuzione VARCHar(100) not null,
-    ruolo VARCHAR(100)
+    -- punto_distribuzione VARCHar(100) not null,
+    -- ruolo VARCHAR(100),
+    abilitazione Boolean not null
 );
+
+create table user_site (
+    user_username varchar references users (username),
+    point_distribution_nome varchar references sites (nome)
+)
+
+create table user_role (
+    user_username varchar references users (username),
+    role_nome varchar references roles (nome)
+)
+
+create table roles (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(20) not null,
+)
 
 create table guests (
 id SERIAL PRIMARY KEY,
@@ -33,7 +49,7 @@ telefono varchar (16) not null,
 via varchar(150) not null 
 );
 
-create table recipe (
+create table recipes (
 id Serial primary key,
 nome Varchar (100)not null,
 descrizione text not null,
@@ -49,18 +65,19 @@ unita_bancale integer not null,
 codice_barre varchar (20) unique not null
 );
 
-create table point_distribution(
+create table sites(
 id Serial primary key,
 nome Varchar (100) not null
 );
 
-create table giacenze (
+create table stock (
 id serial primary key,
-point_distribution_id integer not null references point_distribution(id),
+site_id integer not null references sites(id),
 product_id integer not null references products(id),
 quantita integer not null,
 scadenza date,
 unique (point_distribution_id, product_id)
 );
+
 
 

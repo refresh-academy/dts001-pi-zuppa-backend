@@ -37,8 +37,8 @@ app.get('/users',async(req,res)=>{
 app.post('/users',async(req,res)=>{
     const text = `
         insert into users
-        (nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        (nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo, abilitazione)
+        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         returning *
     `;
         const nome = pickFirst(req.body.name, req.body.nome);
@@ -50,7 +50,8 @@ app.post('/users',async(req,res)=>{
         const livello_accesso = pickFirst(req.body.accesLevel, req.body.accessLevel, req.body.livello_accesso);
         const punto_distribuzione = pickFirst(req.body.site, req.body.puntoDistribuzione, req.body.punto_distribuzione);
         const ruolo = req.body.role;
-        const values = [nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo];
+        const abilitazione = req.body.abilitazione;
+        const values = [nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo, abilitazione];
         const queryResults = await pool.query(text, values);
         res.json(queryResults.rows);
 
@@ -62,7 +63,7 @@ app.post('/users',async(req,res)=>{
 app.patch('/users/:id',async(req,res)=>{
    
     const text = `
-        update  users set nome =$1 , cognome = $2, telefono = $3, username =$4, password =$5, email=$6, livello_accesso=$7, punto_distribuzione=$8, ruolo=$9 where id =$10
+        update  users set nome =$1 , cognome = $2, telefono = $3, username =$4, password =$5, email=$6, livello_accesso=$7, punto_distribuzione=$8, ruolo=$9, abilitazione =$10 where id =$11
         returning *
     `;
         
@@ -75,6 +76,7 @@ app.patch('/users/:id',async(req,res)=>{
         const livello_accesso = pickFirst(req.body.accesLevel, req.body.accessLevel, req.body.livello_accesso);
         const punto_distribuzione = pickFirst(req.body.site, req.body.puntoDistribuzione, req.body.punto_distribuzione);
         const ruolo = req.body.role;
+        const abilitazione = req.body.abilitation;
         const id = req.params.id;
         const values = [nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo,id];
         const queryResults = await pool.query(text, values);

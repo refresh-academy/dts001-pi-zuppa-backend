@@ -1,17 +1,21 @@
 insert into  users (nome,cognome,telefono,
 username,password,email,livello_accesso,
-punto_distribuzione,ruolo)
+punto_distribuzione,ruolo,abilitazione)
 values ('Svetlana','Vitu','3896234393','svetty','panda',
 'svetlana.vitu@refresh-academy.org','coordinatore',
-'savena','cucina'),
+'Savena','cucina','true'),
 ('Simone','Querzoli','3348484309','Paddington','fabrizioèuncornuto','simone.querzoli@refresh-academy.it',
-'volontario','San Donato','magazzino'),
+'volontario','San Donato','magazzino','true'),
 ('Irene','Ruscelli','test1','crocutacrocuta','1312Izzy<32024Lea',
 'irene.ruscelli@refresh-academy.org','coordinatore',
-'savena','accoglienza'),
+'Savena','accoglienza','true'),
 ('Nicolas','Carotenuto','test','niko.car','overwatch',
 'nicolas.carotenuto@refresh-academy.org','coordinatore',
-'saffi','magazzino');
+'Saffi','magazzino','true');
+('Big','Boss','test','Admin','piuzuppa',
+'','coordinatore',
+'Saffi','magazzino','true');
+
 
 insert into point_distribution (nome)
 values ('Saffi'),('San Donato'),('Savena'),('Battiferro');
@@ -33,3 +37,15 @@ values ('Caritas','051-5789321','via Irnerio 45');
 insert into guests (nome, cognome, residente, data_nascita, numeri_famigliari
 professione, telefono, ente_segnalazione, ricevimento_pasto, pasti)
 values ('Giuseppe', 'Rezzonico','si', '27/05/1986', '5','panificatore','339151312', 'Caritas', 'in loco', '5');
+
+-- popoliamo utenti punti di distribuzione
+insert into user_point_distribution values 
+('svetty','Savena'),
+('svetty','Saffi'),
+('crocutacrocuta','Savena'),
+('Paddington','Battiferro'),
+('niko.car','San Donato'),
+('Admin','Savena'),
+('Admin','Battiferro'),
+('Admin','San Donato'),
+('Admin','Saffi')

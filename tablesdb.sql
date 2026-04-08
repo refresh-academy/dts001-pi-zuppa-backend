@@ -14,7 +14,7 @@ CREATE TABLE users (
 
 create table user_site (
     user_username varchar references users (username),
-    point_distribution_nome varchar references sites (nome)
+    site_nome varchar references sites (nome)
 )
 
 create table user_role (
@@ -53,8 +53,14 @@ create table recipes (
 id Serial primary key,
 nome Varchar (100)not null,
 descrizione text not null,
-ingredienti text not null
+--ingredienti text not null
 );
+
+create table recipe_product(
+    recipe_nome varchar references recipes (nome),
+    product_nome varchar references products (nome),
+    quantita_per_pasto decimal not null,
+)
 
 create table products (
 id Serial primary key,

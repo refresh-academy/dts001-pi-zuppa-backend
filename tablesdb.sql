@@ -7,25 +7,24 @@ CREATE TABLE users (
     password VARCHAR (100) NOT NULL,
     email VARCHAR(100),
     livello_accesso VARCHAR(20) NOT NULL,
-    -- punto_distribuzione VARCHar(100) not null,
-    -- ruolo VARCHAR(100),
     abilitazione Boolean not null
 );
 
 create table user_site (
     user_username varchar references users (username),
-    site_nome varchar references sites (nome)
-)
+    site_id int references sites (id)
+);
+
 
 create table user_role (
     user_username varchar references users (username),
-    role_nome varchar references roles (nome)
-)
+    role_id int references roles (id)
+);
 
 create table roles (
     id SERIAL PRIMARY KEY,
-    nome VARCHAR(20) not null,
-)
+    nome VARCHAR(20) not null
+);
 
 create table guests (
 id SERIAL PRIMARY KEY,
@@ -59,8 +58,8 @@ descrizione text not null,
 create table recipe_product(
     recipe_nome varchar references recipes (nome),
     product_nome varchar references products (nome),
-    quantita_per_pasto decimal not null,
-)
+    quantita_per_pasto decimal not null
+);
 
 create table products (
 id Serial primary key,
@@ -84,6 +83,5 @@ quantita integer not null,
 scadenza date,
 unique (point_distribution_id, product_id)
 );
-
 
 

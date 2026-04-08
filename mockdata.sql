@@ -1,20 +1,15 @@
 insert into  users (nome,cognome,telefono,
-username,password,email,livello_accesso,
-punto_distribuzione,ruolo,abilitazione)
+username,password,email,livello_accesso,abilitazione)
 values ('Svetlana','Vitu','3896234393','svetty','panda',
-'svetlana.vitu@refresh-academy.org','coordinatore',
-'Savena','cucina','true'),
+'svetlana.vitu@refresh-academy.org','coordinatore','true'),
 ('Simone','Querzoli','3348484309','Paddington','fabrizioèuncornuto','simone.querzoli@refresh-academy.it',
-'volontario','San Donato','magazzino','true'),
+'volontario','true'),
 ('Irene','Ruscelli','test1','crocutacrocuta','1312Izzy<32024Lea',
-'irene.ruscelli@refresh-academy.org','coordinatore',
-'Savena','accoglienza','true'),
+'irene.ruscelli@refresh-academy.org','coordinatore','true'),
 ('Nicolas','Carotenuto','test','niko.car','overwatch',
-'nicolas.carotenuto@refresh-academy.org','coordinatore',
-'Saffi','magazzino','true');
+'nicolas.carotenuto@refresh-academy.org','coordinatore','true');
 ('Big','Boss','test','Admin','piuzuppa',
-'','coordinatore',
-'Saffi','magazzino','true');
+'','coordinatore','true');
 
 
 insert into sites (nome)
@@ -46,12 +41,17 @@ values ('Giuseppe', 'Rezzonico','si', '27/05/1986', '5','panificatore','33915131
 
 -- popoliamo utenti punti di distribuzione
 insert into user_site values 
-('svetty','Savena'),
-('svetty','Saffi'),
-('crocutacrocuta','Savena'),
-('Paddington','Battiferro'),
-('niko.car','San Donato'),
-('Admin','Savena'),
-('Admin','Battiferro'),
-('Admin','San Donato'),
-('Admin','Saffi')
+('svetty','3'),
+('svetty','1'),
+('crocutacrocuta','3'),
+('Paddington','4'),
+('niko.car','2');
+
+insert into roles (nome)
+values ('cucina'),
+('magazzino'),
+('accoglienza');ù
+
+insert into user_role (role_id,user_username)
+values (1,'crocutacrocuta'),(2,'svetty'),(3,'Paddington'),(1,'niko.car'),
+(2,'Paddington'),(3,'crocutacrocuta');

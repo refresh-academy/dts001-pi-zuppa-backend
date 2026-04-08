@@ -28,7 +28,7 @@ insert into recipe (nome, descrizione, ingredienti)
 values ('maccheroni','maccheroni in bianco','pasta, olio, sale, parmigiano');
  
 insert into entities (nome, telefono,via)
-values ('Coldiretti','051-5789321','via Irnerio 45');
+values ('Caritas','051-5789321','via Irnerio 45');
 
 insert into guests (nome, cognome, residente, data_nascita, numeri_famigliari
 professione, telefono, ente_segnalazione, ricevimento_pasto, pasti)

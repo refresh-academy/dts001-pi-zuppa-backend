@@ -10,21 +10,27 @@ CREATE TABLE users (
     abilitazione Boolean not null
 );
 
-create table user_site (
-    user_username varchar references users (username),
-    site_id int references sites (id)
-);
-
-
-create table user_role (
-    user_username varchar references users (username),
-    role_id int references roles (id)
-);
-
 create table roles (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(20) not null
 );
+
+create table sites(
+id Serial primary key,
+nome Varchar (100) not null
+);
+
+create table user_site (
+    user_username varchar unique references users (username),
+    site_id int references sites (id)
+);
+
+create table user_role (
+    user_username varchar unique references users (username),
+    role_id int references roles (id)
+);
+
+
 
 create table guests (
 id SERIAL PRIMARY KEY,
@@ -50,29 +56,23 @@ via varchar(150) not null
 
 create table recipes (
 id Serial primary key,
-nome Varchar (100)not null,
-descrizione text not null,
---ingredienti text not null
-);
-
-create table recipe_product(
-    recipe_nome varchar references recipes (nome),
-    product_nome varchar references products (nome),
-    quantita_per_pasto decimal not null
+nome Varchar (100) unique not null,
+descrizione text not null
 );
 
 create table products (
 id Serial primary key,
-nome Varchar (100)not null,
+nome Varchar (100) unique not null,
 articolo_peso boolean not null,
 unita_collo  integer not null,
 unita_bancale integer not null,
 codice_barre varchar (20) unique not null
 );
 
-create table sites(
-id Serial primary key,
-nome Varchar (100) not null
+create table recipe_product(
+    recipe_nome varchar unique references recipes (nome),
+    product_nome varchar unique references products (nome),
+    quantita_per_pasto decimal not null
 );
 
 create table stock (
@@ -81,7 +81,12 @@ site_id integer not null references sites(id),
 product_id integer not null references products(id),
 quantita integer not null,
 scadenza date,
-unique (point_distribution_id, product_id)
+unique (site_id, product_id)
+);
+
+create table guest_entity (
+guest_id int unique references guests (id),
+entity_nome varchar unique references entities (nome)
 );
 
 

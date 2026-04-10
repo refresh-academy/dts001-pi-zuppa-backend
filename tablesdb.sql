@@ -1,3 +1,5 @@
+CREATE TYPE delivery_mode AS ENUM ('mensa', 'asporto');
+
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     nome VARCHAR(100),
@@ -40,20 +42,17 @@ id SERIAL PRIMARY KEY,
     data_nascita Date not null,
     numeri_famigliari Integer not null,
     professione Varchar(50) not null,
-    telefono VARCHAR(16) not null,
-    ente_segnalazione varchar (50) not null,
- 	ricevimento_pasto varchar (20)not null
+    telefono VARCHAR(16) not null
 );
-
-DROP TABLE guests;
 
 CREATE TABLE meal_types (
 tipo VARCHAR(50) UNIQUE NOT null
 );
 
-CREATE TABLE meals (
-guest_id int UNIQUE REFERENCES guests(id),
-meal_type varchar UNIQUE references meal_types(tipo) 
+CREATE TABLE guest_meal (
+guest_id int REFERENCES guests(id),
+meal_type varchar references meal_types(tipo),
+ricevimento_pasto delivery_mode
 );
 
 create table entities(
@@ -78,10 +77,11 @@ unita_bancale integer not null,
 codice_barre varchar (20) unique not null
 );
 
-create table recipe_product(
-    recipe_nome varchar unique references recipes (nome),
-    product_nome varchar unique references products (nome),
-    quantita_per_pasto decimal not null
+CREATE TABLE recipe_product (
+    recipe_nome VARCHAR REFERENCES recipes (nome),
+    product_nome VARCHAR REFERENCES products (nome),
+    quantita_per_pasto DECIMAL(10, 4) NOT NULL, 
+    PRIMARY KEY (recipe_nome, product_nome)
 );
 
 create table stock (
@@ -108,3 +108,33 @@ recipe_nome varchar unique references recipes (nome),
 meal_type varchar unique references meal_types (tipo)
 );
 
+CREATE TABLE daily_meal_stats (
+    id SERIAL PRIMARY KEY,
+    data DATE NOT NULL DEFAULT CURRENT_DATE,
+    site_id INT REFERENCES sites(id),
+    meal_type VARCHAR(50) REFERENCES meal_types(tipo),
+    qta_prodotti INT NOT NULL,
+    qta_avanzati INT DEFAULT 0,
+    notes TEXT,
+    UNIQUE (data, site_id, meal_type)
+);
+
+CREATE TABLE meal_logs (
+    id SERIAL PRIMARY KEY,
+    data DATE NOT NULL DEFAULT CURRENT_DATE,
+    guest_id INT REFERENCES guests(id),
+    site_id INT REFERENCES sites(id),
+    meal_type VARCHAR(50) REFERENCES meal_types(tipo),
+    modalita_ricevimento delivery_mode,
+    consegnato BOOLEAN DEFAULT TRUE,
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (data, guest_id, meal_type)
+);
+
+CREATE TABLE daily_absences (
+    id SERIAL PRIMARY KEY,
+    data DATE NOT NULL,
+    guest_id INT REFERENCES guests(id),
+    ragione TEXT,
+    UNIQUE (data, guest_id)
+);

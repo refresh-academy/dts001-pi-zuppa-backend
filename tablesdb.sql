@@ -42,9 +42,18 @@ id SERIAL PRIMARY KEY,
     professione Varchar(50) not null,
     telefono VARCHAR(16) not null,
     ente_segnalazione varchar (50) not null,
- 	ricevimento_pasto varchar (20)not null,
- 	pasti varchar (20)not null
+ 	ricevimento_pasto varchar (20)not null
+);
 
+DROP TABLE guests;
+
+CREATE TABLE meal_types (
+tipo VARCHAR(50) UNIQUE NOT null
+);
+
+CREATE TABLE meals (
+guest_id int UNIQUE REFERENCES guests(id),
+meal_type varchar UNIQUE references meal_types(tipo) 
 );
 
 create table entities(
@@ -89,4 +98,13 @@ guest_id int unique references guests (id),
 entity_nome varchar unique references entities (nome)
 );
 
+create table guest_site (
+guest_id int unique references guests (id),
+site_id int unique references sites(id)
+);
+
+create table recipe_type (
+recipe_nome varchar unique references recipes (nome),
+meal_type varchar unique references meal_types (tipo)
+);
 

@@ -45,29 +45,68 @@ app.get('/users', async (req, res) => {
 
 
 //per gestione nuovo utente
-app.post('/users',async(req,res)=>{
-    const text = `
-        insert into users
-        (nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo, abilitazione)
-        values ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
-        returning *
-    `;
-        const nome = pickFirst(req.body.name, req.body.nome);
-        const cognome = pickFirst(req.body.surname, req.body.cognome);
-        const telefono = pickFirst(req.body.phone, req.body.telefono);
+app.post('/users', async (req, res) => {
+    const client = await pool.connect(); // Use a client for transactions
+
+    try {
+        await client.query('BEGIN');
+
+        const nome = req.body.name || req.body.nome;
+        const cognome = req.body.surname || req.body.cognome;
+        const telefono = req.body.phone || req.body.telefono;
         const username = req.body.username;
         const password = req.body.password;
         const email = req.body.email;
-        const livello_accesso = pickFirst(req.body.accesLevel, req.body.accessLevel, req.body.livello_accesso);
-        const punto_distribuzione = pickFirst(req.body.site, req.body.puntoDistribuzione, req.body.punto_distribuzione);
-        const ruolo = req.body.role;
-        const abilitazione = req.body.abilitazione;
-        const values = [nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo, abilitazione];
-        const queryResults = await pool.query(text, values);
-        res.json(queryResults.rows);
+        const livello_accesso = req.body.accessLevel || req.body.livello_accesso || 'volontario';
+        
+        const sites = req.body.site || []; 
+        const roles = req.body.role || [];
 
+        const userQuery = `
+            INSERT INTO users (nome, cognome, telefono, username, password, email, livello_accesso, abilitazione)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            RETURNING *;
+        `;
+
+        const abilitazione = req.body.abilitazione !== undefined ? req.body.abilitazione : true;
+
+        const userRes = await client.query(userQuery, [
+            nome, 
+            cognome, 
+            telefono, 
+            username, 
+            password, 
+            email, 
+            livello_accesso, 
+            abilitazione
+        ]);
+
+        for (const roleName of roles) {
+            await client.query(`
+                INSERT INTO user_role (user_username, role_id)
+                SELECT $1, id FROM roles WHERE nome = $2
+            `, [username, roleName]);
+        }
+
+        for (const siteName of sites) {
+            await client.query(`
+                INSERT INTO user_site (user_username, site_id)
+                SELECT $1, id FROM sites WHERE nome = $2
+            `, [username, siteName]);
+        }
+
+        await client.query('COMMIT');
+
+        res.json({ ...newUser, sites, roles });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: "Errore durante la creazione dell'utente" });
+    } finally {
+        client.release();
+    }
 });
-
 
 
 //modifica utente

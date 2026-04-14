@@ -25,11 +25,22 @@ app.use((req, res, next) => {
 const pickFirst = (...values) => values.find((value) => value !== undefined && value !== null);
 
 //restituisce la lista degli utenti
-app.get('/users',async(req,res)=>{
-    const queryResults = await pool.query('SELECT * from users')
-    const result = queryResults.rows
-    res.json(result);
-})
+app.get('/users', async (req, res) => {
+    const query = `
+        SELECT 
+            u.id, u.nome, u.cognome, u.username, u.password, u.telefono, u.email, u.livello_accesso, 
+            ARRAY_AGG(DISTINCT s.nome) AS sites, 
+            ARRAY_AGG(DISTINCT r.nome) AS roles 
+        FROM users u 
+        LEFT JOIN user_role ur ON u.username = ur.user_username 
+        LEFT JOIN roles r ON ur.role_id = r.id 
+        LEFT JOIN user_site us ON u.username = us.user_username 
+        LEFT JOIN sites s ON us.site_id = s.id 
+        GROUP BY u.id, u.nome, u.cognome, u.telefono, u.username, u.email, u.livello_accesso;
+    `;
+    const queryResults = await pool.query(query);
+    res.json(queryResults.rows);
+});
 
 
 

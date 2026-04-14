@@ -46,7 +46,7 @@ app.get('/users', async (req, res) => {
 
 //per gestione nuovo utente
 app.post('/users', async (req, res) => {
-    const client = await pool.connect(); // Use a client for transactions
+    const client = await pool.connect();
 
     try {
         await client.query('BEGIN');
@@ -110,30 +110,75 @@ app.post('/users', async (req, res) => {
 
 
 //modifica utente
-app.patch('/users/:id',async(req,res)=>{
-   
-    const text = `
-        update  users set nome =$1 , cognome = $2, telefono = $3, username =$4, password =$5, email=$6, livello_accesso=$7, punto_distribuzione=$8, ruolo=$9, abilitazione =$10 where id =$11
-        returning *
-    `;
+app.patch('/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        // 1. Update the main User table
+        const userUpdateQuery = `
+            UPDATE users 
+            SET nome=$1, cognome=$2, telefono=$3, password=$4, email=$5, livello_accesso=$6, abilitazione=$7
+            WHERE id=$8 RETURNING username;
+        `;
         
-        const nome = pickFirst(req.body.name, req.body.nome);
-        const cognome = pickFirst(req.body.surname, req.body.cognome);
-        const telefono = pickFirst(req.body.phone, req.body.telefono);
-        const username = req.body.username;
-        const password = req.body.password;
-        const email = req.body.email;
-        const livello_accesso = pickFirst(req.body.accesLevel, req.body.accessLevel, req.body.livello_accesso);
-        const punto_distribuzione = pickFirst(req.body.site, req.body.puntoDistribuzione, req.body.punto_distribuzione);
-        const ruolo = req.body.role;
-        const abilitazione = req.body.abilitation;
-        const id = req.params.id;
-        const values = [nome, cognome, telefono, username, password, email, livello_accesso, punto_distribuzione, ruolo,id];
-        const queryResults = await pool.query(text, values);
-        res.json(queryResults.rows);
+        // Map frontend CreateUserProps names to DB columns
+        const values = [
+            req.body.name || req.body.nome,
+            req.body.surname || req.body.cognome,
+            req.body.phone || req.body.telefono,
+            req.body.password,
+            req.body.email,
+            req.body.accessLevel || req.body.livello_accesso,
+            req.body.abilitazione,
+            id
+        ];
 
+        const userRes = await client.query(userUpdateQuery, values);
+        const username = userRes.rows[0].username;
+
+        // 2. Sync Roles: Delete old ones and insert new ones
+        await client.query('DELETE FROM user_role WHERE user_username = $1', [username]);
+        const roles = req.body.role || [];
+        for (const roleName of roles) {
+            await client.query(
+                `INSERT INTO user_role (user_username, role_id) 
+                 SELECT $1, id FROM roles WHERE nome = $2`, 
+                [username, roleName]
+            );
+        }
+
+        // 3. Sync Sites: Delete old ones and insert new ones
+        await client.query('DELETE FROM user_site WHERE user_username = $1', [username]);
+        const sites = req.body.site || [];
+        for (const siteName of sites) {
+            await client.query(
+                `INSERT INTO user_site (user_username, site_id) 
+                 SELECT $1, id FROM sites WHERE nome = $2`, 
+                [username, siteName]
+            );
+        }
+
+        await client.query('COMMIT');
+        
+        // Return the updated user data in the format the frontend expects
+        res.json({ 
+            ...req.body, 
+            id, 
+            sites: sites, 
+            roles: roles 
+        });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send("Update failed");
+    } finally {
+        client.release();
+    }
 });
-
 
 //"type":"commonjs" in fondo alla pagina obbligatorio
 app.listen(port, () => {

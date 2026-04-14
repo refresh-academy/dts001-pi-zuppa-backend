@@ -1,3 +1,6 @@
+drop table user_role;
+drop table user_site;
+
 CREATE TYPE delivery_mode AS ENUM ('mensa', 'asporto');
 
 CREATE TABLE users (
@@ -23,12 +26,12 @@ nome Varchar (100) not null
 );
 
 create table user_site (
-    user_username varchar unique references users (username),
+    user_username varchar references users (username),
     site_id int references sites (id)
 );
 
 create table user_role (
-    user_username varchar unique references users (username),
+    user_username varchar references users (username),
     role_id int references roles (id)
 );
 

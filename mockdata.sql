@@ -7,7 +7,7 @@ values ('Svetlana','Vitu','3896234393','svetty','panda',
 ('Irene','Ruscelli','test1','crocutacrocuta','1312Izzy<32024Lea',
 'irene.ruscelli@refresh-academy.org','coordinatore','true'),
 ('Nicolas','Carotenuto','test','niko.car','overwatch',
-'nicolas.carotenuto@refresh-academy.org','coordinatore','true');
+'nicolas.carotenuto@refresh-academy.org','coordinatore','true'),
 ('Big','Boss','test','Admin','piuzuppa',
 '','coordinatore','true');
 
@@ -50,7 +50,7 @@ insert into user_site values
 insert into roles (nome)
 values ('cucina'),
 ('magazzino'),
-('accoglienza');ù
+('accoglienza');
 
 insert into user_role (role_id,user_username)
 values (1,'crocutacrocuta'),(2,'svetty'),(3,'Paddington'),(1,'niko.car'),

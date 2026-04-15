@@ -180,6 +180,45 @@ app.patch('/users/:id', async (req, res) => {
     }
 });
 
+//elimina utente
+app.delete('/users/:id', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const userRes = await client.query(
+            'SELECT username FROM users WHERE id = $1',
+            [id]
+        );
+
+        if (userRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const username = userRes.rows[0].username;
+
+        await client.query('DELETE FROM user_role WHERE user_username = $1', [username]);
+        await client.query('DELETE FROM user_site WHERE user_username = $1', [username]);
+
+        const deleteRes = await client.query(
+            'DELETE FROM users WHERE id = $1 RETURNING *',
+            [id]
+        );
+
+        await client.query('COMMIT');
+        res.json(deleteRes.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).send('Delete failed');
+    } finally {
+        client.release();
+    }
+});
+
 //"type":"commonjs" in fondo alla pagina obbligatorio
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)

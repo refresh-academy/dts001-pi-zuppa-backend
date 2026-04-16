@@ -59,7 +59,95 @@ app.get('/guests', async (req, res) => {
     res.json(queryResults.rows);
 })
 
+app.get('/meal_types', async(req, res) =>{
+    const query = "SELECT * FROM meal_types";
+    const queryResults = await pool.query(query);
+    res.json(queryResults.rows);
+})
 
+app.get('/entities', async(req, res) =>{
+    const query = "SELECT * FROM entities";
+    const queryResults = await pool.query(query);
+    res.json(queryResults.rows);
+})
+
+app.post('/guests', async (req, res) => {
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const nome = pickFirst(req.body.name, req.body.nome, '').trim();
+        const cognome = pickFirst(req.body.surname, req.body.cognome, '').trim();
+        const residente = Boolean(req.body.resident ?? req.body.residente);
+        const data_nascita = pickFirst(req.body.birthDate, req.body.dataDiNascita, req.body.data_nascita);
+        const numeri_famigliari = Number(pickFirst(req.body.familyCount, req.body.numeroFamiliari, req.body.numeri_famigliari, 0));
+        const professione = pickFirst(req.body.profession, req.body.professione, '').trim();
+        const telefono = String(pickFirst(req.body.phone, req.body.telefono, '')).trim();
+        const entityName = String(pickFirst(req.body.entityName, req.body.enteSegnalazione, '')).trim();
+        const meals = Array.isArray(req.body.meals) ? req.body.meals : [];
+
+        if (!nome || !cognome || !data_nascita || !professione || !telefono || !entityName) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Missing required guest fields' });
+        }
+
+        if (meals.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'At least one meal is required' });
+        }
+
+        const guestRes = await client.query(
+            `INSERT INTO guests (nome, cognome, residente, data_nascita, numeri_famigliari, professione, telefono)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)
+             RETURNING *`,
+            [nome, cognome, residente, data_nascita, numeri_famigliari, professione, telefono]
+        );
+
+        const guest = guestRes.rows[0];
+
+        const entityRes = await client.query(
+            'SELECT id, nome FROM entities WHERE nome = $1',
+            [entityName]
+        );
+
+        if (entityRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Selected entity not found' });
+        }
+
+        await client.query(
+            'INSERT INTO guest_entity (guest_id, entity_id) VALUES ($1, $2)',
+            [guest.id, entityRes.rows[0].id]
+        );
+
+        for (const meal of meals) {
+            const mealType = String(pickFirst(meal.mealType, meal.tipo, '')).trim();
+            const deliveryType = String(pickFirst(meal.deliveryType, meal.consegna, '')).trim();
+
+            if (!mealType || !deliveryType) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Meal type and delivery are required' });
+            }
+
+            await client.query(
+                `INSERT INTO guest_meal (guest_id, meal_type, ricevimento_pasto)
+                 VALUES ($1, $2, $3)`,
+                [guest.id, mealType, deliveryType]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.status(201).json({ ...guest, entity: entityRes.rows[0].nome, meals });
+
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: "Errore durante la creazione dell'ospite" });
+    } finally {
+        client.release();
+    }
+});
 
 //per gestione nuovo utente
 app.post('/users', async (req, res) => {
@@ -259,6 +347,7 @@ app.delete('/users/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+
 
 
 

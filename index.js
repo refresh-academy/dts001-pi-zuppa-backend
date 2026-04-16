@@ -97,6 +97,7 @@ app.post('/users', async (req, res) => {
 
         await client.query('COMMIT');
 
+        const newUser = userRes.rows[0];
         res.json({ ...newUser, sites, roles });
 
     } catch (err) {
@@ -117,29 +118,55 @@ app.patch('/users/:id', async (req, res) => {
     try {
         await client.query('BEGIN');
 
-        // 1. Update the main User table
+        const currentUserRes = await client.query(
+            'SELECT username FROM users WHERE id = $1',
+            [id]
+        );
+
+        if (currentUserRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'User not found' });
+        }
+
+        const previousUsername = currentUserRes.rows[0].username;
+        const nome = pickFirst(req.body.name, req.body.nome, '');
+        const cognome = pickFirst(req.body.surname, req.body.cognome, null);
+        const telefono = pickFirst(req.body.phone, req.body.telefono, '');
+        const username = req.body.username;
+        const password = req.body.password;
+        const email = req.body.email;
+        const livello_accesso = pickFirst(req.body.accessLevel, req.body.livello_accesso, 'volontario');
+        const abilitazione = req.body.abilitazione !== undefined ? req.body.abilitazione : true;
+
         const userUpdateQuery = `
             UPDATE users 
-            SET nome=$1, cognome=$2, telefono=$3, password=$4, email=$5, livello_accesso=$6, abilitazione=$7
-            WHERE id=$8 RETURNING username;
+            SET nome=$1, cognome=$2, telefono=$3, username=$4, password=$5, email=$6, livello_accesso=$7, abilitazione=$8
+            WHERE id=$9 RETURNING *;
         `;
-        
-        // Map frontend CreateUserProps names to DB columns
-        const values = [
-            req.body.name || req.body.nome,
-            req.body.surname || req.body.cognome,
-            req.body.phone || req.body.telefono,
-            req.body.password,
-            req.body.email,
-            req.body.accessLevel || req.body.livello_accesso,
-            req.body.abilitazione,
+
+        const userRes = await client.query(userUpdateQuery, [
+            nome,
+            cognome,
+            telefono,
+            username,
+            password,
+            email,
+            livello_accesso,
+            abilitazione,
             id
-        ];
+        ]);
 
-        const userRes = await client.query(userUpdateQuery, values);
-        const username = userRes.rows[0].username;
+        if (previousUsername !== username) {
+            await client.query(
+                'UPDATE user_role SET user_username = $1 WHERE user_username = $2',
+                [username, previousUsername]
+            );
+            await client.query(
+                'UPDATE user_site SET user_username = $1 WHERE user_username = $2',
+                [username, previousUsername]
+            );
+        }
 
-        // 2. Sync Roles: Delete old ones and insert new ones
         await client.query('DELETE FROM user_role WHERE user_username = $1', [username]);
         const roles = req.body.role || [];
         for (const roleName of roles) {
@@ -150,7 +177,6 @@ app.patch('/users/:id', async (req, res) => {
             );
         }
 
-        // 3. Sync Sites: Delete old ones and insert new ones
         await client.query('DELETE FROM user_site WHERE user_username = $1', [username]);
         const sites = req.body.site || [];
         for (const siteName of sites) {
@@ -162,14 +188,7 @@ app.patch('/users/:id', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        
-        // Return the updated user data in the format the frontend expects
-        res.json({ 
-            ...req.body, 
-            id, 
-            sites: sites, 
-            roles: roles 
-        });
+        res.json({ ...userRes.rows[0], sites, roles });
 
     } catch (err) {
         await client.query('ROLLBACK');
@@ -223,3 +242,6 @@ app.delete('/users/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+
+
+

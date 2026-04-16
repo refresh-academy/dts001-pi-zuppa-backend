@@ -97,8 +97,8 @@ unique (site_id, product_id)
 );
 
 create table guest_entity (
-guest_id int unique references guests (id),
-entity_nome varchar unique references entities (nome)
+guest_id int references guests (id),
+entity_id int references entities (id)
 );
 
 create table guest_site (

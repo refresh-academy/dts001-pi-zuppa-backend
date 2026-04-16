@@ -46,7 +46,7 @@ app.get('/users', async (req, res) => {
 app.get('/guests', async (req, res) => {
     const query = `
         SELECT 
-            g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numeri_famigliari, g.professione,g.telefono,e.nome, 
+            g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numeri_famigliari, g.professione, g.telefono, e.nome AS entity_name, 
             ARRAY_AGG(DISTINCT gm.meal_type ) AS guest_meal 
         FROM guests g 
         LEFT JOIN guest_meal gm ON g.id = gm.guest_id
@@ -59,6 +59,48 @@ app.get('/guests', async (req, res) => {
     res.json(queryResults.rows);
 })
 
+
+//restituisce i dettagli di un ospite per id
+app.get('/guests/:id', async (req, res) => {
+    const { id } = req.params;
+
+    const query = `
+        SELECT
+            g.id,
+            g.nome,
+            g.cognome,
+            g.residente,
+            g.data_nascita,
+            g.numeri_famigliari,
+            g.professione,
+            g.telefono,
+            e.nome AS entity_name,
+            COALESCE(
+                JSON_AGG(
+                    DISTINCT JSONB_BUILD_OBJECT(
+                        'id', gm.ctid,
+                        'meal_type', gm.meal_type,
+                        'delivery_type', gm.ricevimento_pasto
+                    )
+                ) FILTER (WHERE gm.meal_type IS NOT NULL),
+                '[]'::json
+            ) AS meals
+        FROM guests g
+        LEFT JOIN guest_meal gm ON g.id = gm.guest_id
+        LEFT JOIN guest_entity ge ON g.id = ge.guest_id
+        LEFT JOIN entities e ON ge.entity_id = e.id
+        WHERE g.id = $1
+        GROUP BY g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numeri_famigliari, g.professione, g.telefono, e.nome;
+    `;
+
+    const queryResults = await pool.query(query, [id]);
+
+    if (queryResults.rowCount === 0) {
+        return res.status(404).json({ error: 'Guest not found' });
+    }
+
+    res.json(queryResults.rows[0]);
+})
 app.get('/meal_types', async(req, res) =>{
     const query = "SELECT * FROM meal_types";
     const queryResults = await pool.query(query);
@@ -347,6 +389,8 @@ app.delete('/users/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+
+
 
 
 

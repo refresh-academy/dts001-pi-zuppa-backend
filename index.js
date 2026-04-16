@@ -42,6 +42,23 @@ app.get('/users', async (req, res) => {
     res.json(queryResults.rows);
 });
 
+//restituisce la lista degli ospiti
+app.get('/guests', async (req, res) => {
+    const query = `
+        SELECT 
+            g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numeri_famigliari, g.professione,g.telefono,e.nome, 
+            ARRAY_AGG(DISTINCT gm.meal_type ) AS guest_meal 
+        FROM guests g 
+        LEFT JOIN guest_meal gm ON g.id = gm.guest_id
+        LEFT JOIN meal_types mt ON gm.meal_type = mt.tipo 
+        LEFT JOIN guest_entity ge ON g.id = ge.guest_id
+        LEFT JOIN entities e ON ge.entity_id = e.id
+        GROUP BY g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numeri_famigliari, g.professione,g.telefono,e.nome;
+    `;
+    const queryResults = await pool.query(query);
+    res.json(queryResults.rows);
+})
+
 
 
 //per gestione nuovo utente

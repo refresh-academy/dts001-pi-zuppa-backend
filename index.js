@@ -113,6 +113,12 @@ app.get('/entities', async(req, res) =>{
     res.json(queryResults.rows);
 })
 
+app.get('/sites', async(req, res) =>{
+    const query = "SELECT * FROM sites";
+    const queryResults = await pool.query(query);
+    res.json(queryResults.rows);
+})
+
 app.post('/guests', async (req, res) => {
     const client = await pool.connect();
 
@@ -127,9 +133,10 @@ app.post('/guests', async (req, res) => {
         const professione = pickFirst(req.body.profession, req.body.professione, '').trim();
         const telefono = String(pickFirst(req.body.phone, req.body.telefono, '')).trim();
         const entityName = String(pickFirst(req.body.entityName, req.body.enteSegnalazione, '')).trim();
+        const siteName = String(pickFirst(req.body.siteName, req.body.puntoDistribuzione, '')).trim();
         const meals = Array.isArray(req.body.meals) ? req.body.meals : [];
 
-        if (!nome || !cognome || !data_nascita || !professione || !telefono || !entityName) {
+        if (!nome || !cognome || !data_nascita || !professione || !telefono || !entityName || !siteName) {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'Missing required guest fields' });
         }
@@ -180,7 +187,7 @@ app.post('/guests', async (req, res) => {
         }
 
         await client.query('COMMIT');
-        res.status(201).json({ ...guest, entity: entityRes.rows[0].nome, meals });
+        res.status(201).json({ ...guest, entity: entityRes.rows[0].nome, site: siteRes.rows[0].nome, meals });
 
     } catch (err) {
         await client.query('ROLLBACK');
@@ -389,6 +396,8 @@ app.delete('/users/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
+
+
 
 
 

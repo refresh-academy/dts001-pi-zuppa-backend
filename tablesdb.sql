@@ -45,7 +45,8 @@ id SERIAL PRIMARY KEY,
     data_nascita Date not null,
     numeri_famigliari Integer not null,
     professione Varchar(50) not null,
-    telefono VARCHAR(16) not null
+    telefono VARCHAR(16) not null,
+    abilitazione bool
 );
 
 CREATE TABLE meal_types (
@@ -62,7 +63,8 @@ create table entities(
 id Serial primary key,
 nome Varchar (100) unique not null,
 telefono varchar (16) not null,
-via varchar(150) not null 
+indirizzo varchar(150) not null,
+email VARCHAR(255),
 );
 
 create table recipes (

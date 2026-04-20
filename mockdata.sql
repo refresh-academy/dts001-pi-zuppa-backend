@@ -21,16 +21,14 @@ codice_barre)
 values ('pomodoro preconfezionato 5 kg','true','1','6','1234567890128'),
 ('biscotti confezionati 500 grammi','false','6','8','1231231232');
 
-insert into stock (point_distribution_id, product_id, quantita, scadenza)
-values ('Saffi','12345789','6','-'),('Savena','987654321','48','-');
+insert into stock (site_id, product_id, quantita, scadenza)
+values (1,1,'6','2006-12-30'),(2,2,'48','2027-01-25');
 
-insert into recipes (nome, descrizione, ingredienti)
+insert into recipes (nome, descrizione )
 values ('maccheroni al sugo','');
 
 insert into recipe_product values
-('maccheroni al sugo','pomodoro preconfezionato 5 kg', "0.08"),
-('maccheroni al sugo','sale grosso 500g', "0.08"),
-('maccheroni al sugo','maccheroni 1kg', "0.2");
+('maccheroni al sugo','pomodoro preconfezionato 5 kg', '0.08');
 
 
 insert into entities (nome, telefono,indirizzo ,email)

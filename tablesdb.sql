@@ -1,7 +1,6 @@
-drop table user_role;
-drop table user_site;
 
 CREATE TYPE delivery_mode AS ENUM ('mensa', 'asporto');
+
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -51,7 +50,7 @@ id SERIAL PRIMARY KEY,
 
 CREATE TABLE meal_types (
 tipo VARCHAR(50) UNIQUE NOT null,
-id Serial primary key;
+id Serial primary key
 );
 
 CREATE TABLE guest_meal (
@@ -65,7 +64,7 @@ id Serial primary key,
 nome Varchar (100) unique not null,
 telefono varchar (16) not null,
 indirizzo varchar(150) not null,
-email VARCHAR(255),
+email VARCHAR(255)
 );
 
 create table recipes (

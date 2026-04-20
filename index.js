@@ -170,6 +170,21 @@ app.post('/guests', async (req, res) => {
             [guest.id, entityRes.rows[0].id]
         );
 
+        const siteRes = await client.query(
+            'SELECT id, nome FROM sites WHERE nome = $1',
+            [siteName]
+        );
+
+        if (siteRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Selected site not found' });
+        }
+
+        await client.query(
+            'INSERT INTO guest_site (guest_id, site_id) VALUES ($1, $2)',
+            [guest.id, siteRes.rows[0].id]
+        );
+
         for (const meal of meals) {
             const mealType = String(pickFirst(meal.mealType, meal.tipo, '')).trim();
             const deliveryType = String(pickFirst(meal.deliveryType, meal.consegna, '')).trim();
@@ -193,6 +208,199 @@ app.post('/guests', async (req, res) => {
         await client.query('ROLLBACK');
         console.error(err);
         res.status(500).json({ error: "Errore durante la creazione dell'ospite" });
+    } finally {
+        client.release();
+    }
+});
+
+//modifica ospite
+app.patch('/guests/:id', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const currentGuestRes = await client.query(
+            'SELECT * FROM guests WHERE id = $1',
+            [id]
+        );
+
+        if (currentGuestRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Guest not found' });
+        }
+
+        const currentGuest = currentGuestRes.rows[0];
+
+        const currentEntityRes = await client.query(
+            `SELECT e.id, e.nome
+             FROM guest_entity ge
+             JOIN entities e ON ge.entity_id = e.id
+             WHERE ge.guest_id = $1
+             LIMIT 1`,
+            [id]
+        );
+
+        const currentSiteRes = await client.query(
+            `SELECT s.id, s.nome
+             FROM guest_site gs
+             JOIN sites s ON gs.site_id = s.id
+             WHERE gs.guest_id = $1
+             LIMIT 1`,
+            [id]
+        );
+
+        const currentMealsRes = await client.query(
+            'SELECT meal_type, ricevimento_pasto FROM guest_meal WHERE guest_id = $1',
+            [id]
+        );
+
+        const nome = String(pickFirst(req.body.name, req.body.nome, currentGuest.nome)).trim();
+        const cognome = String(pickFirst(req.body.surname, req.body.cognome, currentGuest.cognome)).trim();
+        const residente = Boolean(pickFirst(req.body.resident, req.body.residente, currentGuest.residente));
+        const data_nascita = pickFirst(req.body.birthDate, req.body.dataDiNascita, req.body.data_nascita, currentGuest.data_nascita);
+        const numeri_famigliari = Number(pickFirst(req.body.familyCount, req.body.numeroFamiliari, req.body.numeri_famigliari, currentGuest.numeri_famigliari));
+        const professione = String(pickFirst(req.body.profession, req.body.professione, currentGuest.professione)).trim();
+        const telefono = String(pickFirst(req.body.phone, req.body.telefono, currentGuest.telefono)).trim();
+        const entityName = String(
+            pickFirst(req.body.entityName, req.body.enteSegnalazione, currentEntityRes.rows[0]?.nome, '')
+        ).trim();
+        const siteName = String(
+            pickFirst(req.body.siteName, req.body.puntoDistribuzione, currentSiteRes.rows[0]?.nome, '')
+        ).trim();
+
+        const mealsInput = req.body.meals;
+        const meals = mealsInput === undefined
+            ? currentMealsRes.rows.map((meal) => ({
+                mealType: meal.meal_type,
+                deliveryType: meal.ricevimento_pasto
+            }))
+            : (Array.isArray(mealsInput) ? mealsInput : []);
+
+        if (!nome || !cognome || !data_nascita || !professione || !telefono || !entityName || !siteName) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Missing required guest fields' });
+        }
+
+        if (Number.isNaN(numeri_famigliari)) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Invalid family count' });
+        }
+
+        if (meals.length === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'At least one meal is required' });
+        }
+
+        const entityRes = await client.query(
+            'SELECT id, nome FROM entities WHERE nome = $1',
+            [entityName]
+        );
+
+        if (entityRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Selected entity not found' });
+        }
+
+        const siteRes = await client.query(
+            'SELECT id, nome FROM sites WHERE nome = $1',
+            [siteName]
+        );
+
+        if (siteRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Selected site not found' });
+        }
+
+        const updateGuestRes = await client.query(
+            `UPDATE guests
+             SET nome = $1,
+                 cognome = $2,
+                 residente = $3,
+                 data_nascita = $4,
+                 numeri_famigliari = $5,
+                 professione = $6,
+                 telefono = $7
+             WHERE id = $8
+             RETURNING *`,
+            [nome, cognome, residente, data_nascita, numeri_famigliari, professione, telefono, id]
+        );
+
+        await client.query('DELETE FROM guest_entity WHERE guest_id = $1', [id]);
+        await client.query('INSERT INTO guest_entity (guest_id, entity_id) VALUES ($1, $2)', [id, entityRes.rows[0].id]);
+
+        await client.query('DELETE FROM guest_site WHERE guest_id = $1', [id]);
+        await client.query('INSERT INTO guest_site (guest_id, site_id) VALUES ($1, $2)', [id, siteRes.rows[0].id]);
+
+        await client.query('DELETE FROM guest_meal WHERE guest_id = $1', [id]);
+        for (const meal of meals) {
+            const mealType = String(pickFirst(meal.mealType, meal.tipo, meal.meal_type, '')).trim();
+            const deliveryType = String(pickFirst(meal.deliveryType, meal.consegna, meal.delivery_type, meal.ricevimento_pasto, '')).trim();
+
+            if (!mealType || !deliveryType) {
+                await client.query('ROLLBACK');
+                return res.status(400).json({ error: 'Meal type and delivery are required' });
+            }
+
+            await client.query(
+                `INSERT INTO guest_meal (guest_id, meal_type, ricevimento_pasto)
+                 VALUES ($1, $2, $3)`,
+                [id, mealType, deliveryType]
+            );
+        }
+
+        await client.query('COMMIT');
+        res.json({
+            ...updateGuestRes.rows[0],
+            entity: entityRes.rows[0].nome,
+            site: siteRes.rows[0].nome,
+            meals
+        });
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: "Errore durante l'aggiornamento dell'ospite" });
+    } finally {
+        client.release();
+    }
+});
+
+//elimina ospite
+app.delete('/guests/:id', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const guestRes = await client.query(
+            'SELECT id FROM guests WHERE id = $1',
+            [id]
+        );
+
+        if (guestRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Guest not found' });
+        }
+
+        await client.query('DELETE FROM meal_logs WHERE guest_id = $1', [id]);
+        await client.query('DELETE FROM daily_absences WHERE guest_id = $1', [id]);
+        await client.query('DELETE FROM guest_meal WHERE guest_id = $1', [id]);
+        await client.query('DELETE FROM guest_entity WHERE guest_id = $1', [id]);
+        await client.query('DELETE FROM guest_site WHERE guest_id = $1', [id]);
+
+        const deleteRes = await client.query(
+            'DELETE FROM guests WHERE id = $1 RETURNING *',
+            [id]
+        );
+
+        await client.query('COMMIT');
+        res.json(deleteRes.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: "Errore durante l'eliminazione dell'ospite" });
     } finally {
         client.release();
     }
@@ -396,8 +604,6 @@ app.delete('/users/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
-
-
 
 
 

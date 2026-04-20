@@ -113,6 +113,131 @@ app.get('/entities', async(req, res) =>{
     res.json(queryResults.rows);
 })
 
+app.get('/entities/:id', async (req, res) => {
+    const { id } = req.params;
+    const queryResults = await pool.query('SELECT * FROM entities WHERE id = $1', [id]);
+
+    if (queryResults.rowCount === 0) {
+        return res.status(404).json({ error: 'Entity not found' });
+    }
+
+    res.json(queryResults.rows[0]);
+});
+
+app.post('/entities', async (req, res) => {
+    const nome = String(pickFirst(req.body.name, req.body.nome, '')).trim();
+    const telefono = String(pickFirst(req.body.phone, req.body.telefono, '')).trim();
+    const indirizzo = String(pickFirst(req.body.address, req.body.indirizzo, '')).trim();
+    const emailRaw = pickFirst(req.body.email, null);
+    const email = emailRaw === null || emailRaw === undefined ? null : String(emailRaw).trim();
+
+    if (!nome || !telefono || !indirizzo) {
+        return res.status(400).json({ error: 'Missing required entity fields' });
+    }
+
+    try {
+        const insertRes = await pool.query(
+            `INSERT INTO entities (nome, telefono, indirizzo, email)
+             VALUES ($1, $2, $3, $4)
+             RETURNING *`,
+            [nome, telefono, indirizzo, email || null]
+        );
+
+        res.status(201).json(insertRes.rows[0]);
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Entity name already exists' });
+        }
+        res.status(500).json({ error: "Errore durante la creazione dell'ente" });
+    }
+});
+
+app.patch('/entities/:id', async (req, res) => {
+    const { id } = req.params;
+
+    try {
+        const currentEntityRes = await pool.query(
+            'SELECT * FROM entities WHERE id = $1',
+            [id]
+        );
+
+        if (currentEntityRes.rowCount === 0) {
+            return res.status(404).json({ error: 'Entity not found' });
+        }
+
+        const currentEntity = currentEntityRes.rows[0];
+        const nome = String(pickFirst(req.body.name, req.body.nome, currentEntity.nome)).trim();
+        const telefono = String(pickFirst(req.body.phone, req.body.telefono, currentEntity.telefono)).trim();
+        const indirizzo = String(pickFirst(req.body.address, req.body.indirizzo, currentEntity.indirizzo)).trim();
+        const emailInput = pickFirst(req.body.email, currentEntity.email);
+        const email = emailInput === null || emailInput === undefined ? null : String(emailInput).trim();
+
+        if (!nome || !telefono || !indirizzo) {
+            return res.status(400).json({ error: 'Missing required entity fields' });
+        }
+
+        const updateRes = await pool.query(
+            `UPDATE entities
+             SET nome = $1, telefono = $2, indirizzo = $3, email = $4
+             WHERE id = $5
+             RETURNING *`,
+            [nome, telefono, indirizzo, email || null, id]
+        );
+
+        res.json(updateRes.rows[0]);
+    } catch (err) {
+        console.error(err);
+        if (err.code === '23505') {
+            return res.status(409).json({ error: 'Entity name already exists' });
+        }
+        res.status(500).json({ error: "Errore durante l'aggiornamento dell'ente" });
+    }
+});
+
+app.delete('/entities/:id', async (req, res) => {
+    const { id } = req.params;
+    const client = await pool.connect();
+
+    try {
+        await client.query('BEGIN');
+
+        const currentEntityRes = await client.query(
+            'SELECT * FROM entities WHERE id = $1',
+            [id]
+        );
+
+        if (currentEntityRes.rowCount === 0) {
+            await client.query('ROLLBACK');
+            return res.status(404).json({ error: 'Entity not found' });
+        }
+
+        const linkedGuestsRes = await client.query(
+            'SELECT COUNT(*)::int AS total FROM guest_entity WHERE entity_id = $1',
+            [id]
+        );
+
+        if (linkedGuestsRes.rows[0].total > 0) {
+            await client.query('ROLLBACK');
+            return res.status(409).json({ error: 'Entity linked to guests and cannot be deleted' });
+        }
+
+        const deleteRes = await client.query(
+            'DELETE FROM entities WHERE id = $1 RETURNING *',
+            [id]
+        );
+
+        await client.query('COMMIT');
+        res.json(deleteRes.rows[0]);
+    } catch (err) {
+        await client.query('ROLLBACK');
+        console.error(err);
+        res.status(500).json({ error: "Errore durante l'eliminazione dell'ente" });
+    } finally {
+        client.release();
+    }
+});
+
 app.get('/sites', async(req, res) =>{
     const query = "SELECT * FROM sites";
     const queryResults = await pool.query(query);
@@ -604,7 +729,6 @@ app.delete('/users/:id', async (req, res) => {
 app.listen(port, () => {
     console.log(`Example app listening on port ${port}`)
 })
-
 
 
 

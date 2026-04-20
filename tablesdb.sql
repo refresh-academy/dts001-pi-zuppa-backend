@@ -50,7 +50,8 @@ id SERIAL PRIMARY KEY,
 );
 
 CREATE TABLE meal_types (
-tipo VARCHAR(50) UNIQUE NOT null
+tipo VARCHAR(50) UNIQUE NOT null,
+id Serial primary key;
 );
 
 CREATE TABLE guest_meal (

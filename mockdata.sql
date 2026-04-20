@@ -47,17 +47,18 @@ values ('Standard'),
 
 insert into guests (nome, cognome, residente, data_nascita, numeri_famigliari,
 professione, telefono)
-values ('Giuseppe', 'Rezzonico','true', '1986-05-27', '5','panificatore','339151312');
+values ('Giuseppe', 'Rezzonico','true', '1986-05-27', '5','panificatore','339151312'),
 ('Marco','Rossi','true','2001-11-03','1','disoccupato','051-225072');
 
 insert into guest_meal (guest_id,meal_type,ricevimento_pasto)
 values ('1','Standard','mensa'),
 ('1','Standard','asporto'),
 ('2','Vegetariano','mensa'),
-('2','Vegetariano','asporto');
+('2','Vegetariano','asporto'),
+('3','Halal','mensa');
 
 insert into guest_entity (guest_id, entity_id)
-values ('1','3'),('2','4');
+values ('1','3'),('2','4'),('3','2');
 
 -- popoliamo utenti punti di distribuzione
 insert into user_site values 

@@ -96,7 +96,7 @@ CREATE TABLE storage_locations (
     altezza_massima_cm integer,
     carico_massimo_kg integer,
     stato condition
-)
+);
 
 CREATE TABLE recipe_product (
     recipe_id INT REFERENCES recipes (id),

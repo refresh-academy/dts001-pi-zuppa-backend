@@ -1,6 +1,10 @@
+DROP SCHEMA IF EXISTS piuzuppa CASCADE;
+CREATE SCHEMA piuzuppa;
+SET search_path TO piuzuppa;
 
 CREATE TYPE delivery_mode AS ENUM ('mensa', 'asporto');
-
+CREATE TYPE preservation_type as ENUM ('fresco','freschissimo','surgelato/congelato','ambiente');
+CREATE TYPE condition as ENUM ('attivo','in_manutenzione','guasto','pieno');
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
@@ -34,18 +38,16 @@ create table user_role (
     role_id int references roles (id)
 );
 
-
-
 create table guests (
 id SERIAL PRIMARY KEY,
     nome VARCHAR(100) not null,
     cognome VARCHAR(100) not null,
     residente Boolean not null,
     data_nascita Date not null,
-    numeri_famigliari Integer not null,
+    numero_famigliari Integer not null,
     professione Varchar(50) not null,
     telefono VARCHAR(16) not null,
-    abilitazione bool
+    abilitazione Boolean not null
 );
 
 CREATE TABLE meal_types (
@@ -77,25 +79,42 @@ create table products (
 id Serial primary key,
 nome Varchar (100) unique not null,
 articolo_peso boolean not null,
-unita_collo  integer not null,
-unita_bancale integer not null,
-codice_barre varchar (20) unique not null
+unita_di_misura Varchar (100) not null,
+unita_per_collo  integer not null,
+colli_per_strato integer not null,
+colli_per_bancale integer not null,
+tipo_codice Varchar (100) not null,
+modalita_di_conservazione preservation_type
 );
 
+CREATE TABLE storage_locations (
+    id serial primary key,
+    nome VARCHAR (100) unique not null,
+    site_id INT REFERENCES sites (id),
+    modalita_di_conservazione preservation_type,
+    capienza_volume_litri integer,
+    altezza_massima_cm integer,
+    carico_massimo_kg integer,
+    stato condition
+)
+
 CREATE TABLE recipe_product (
-    recipe_nome VARCHAR REFERENCES recipes (nome),
-    product_nome VARCHAR REFERENCES products (nome),
+    recipe_id INT REFERENCES recipes (id),
+    product_id INT REFERENCES products (id),
     quantita_per_pasto DECIMAL(10, 4) NOT NULL, 
-    PRIMARY KEY (recipe_nome, product_nome)
+    PRIMARY KEY (recipe_id, product_id)
 );
 
 create table stock (
 id serial primary key,
 site_id integer not null references sites(id),
 product_id integer not null references products(id),
-quantita integer not null,
+location_id integer not null references storage_locations(id),
+quantita DECIMAL(10,2),
 scadenza date,
-unique (site_id, product_id)
+lotto varchar(100),
+codice_barre varchar(100),
+UNIQUE (site_id, product_id, location_id, scadenza, lotto)
 );
 
 create table guest_entity (
@@ -105,12 +124,12 @@ entity_id int references entities (id)
 
 create table guest_site (
 guest_id int unique references guests (id),
-site_id int unique references sites(id)
+site_id int references sites(id)
 );
 
 create table recipe_type (
-recipe_nome varchar unique references recipes (nome),
-meal_type varchar unique references meal_types (tipo)
+recipe_id int unique references recipes (id),
+meal_type_id int references meal_types (id)
 );
 
 CREATE TABLE daily_meal_stats (

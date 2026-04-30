@@ -47,7 +47,7 @@ id SERIAL PRIMARY KEY,
     numero_famigliari Integer not null,
     professione Varchar(50) not null,
     telefono VARCHAR(16) not null,
-    abilitazione Boolean not null
+    abilitazione Boolean not null DEFAULT true
 );
 
 CREATE TABLE meal_types (

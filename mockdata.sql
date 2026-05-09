@@ -52,8 +52,8 @@ VALUES (1, 1, 0.0800), (1, 3, 0.1200);
 -- 6. MEAL TYPES & GUESTS
 INSERT INTO meal_types (tipo) VALUES ('Standard'), ('Vegetariano'), ('Vegano'), ('Halal'), ('No latticini'), ('Senza glutine');
 
-INSERT INTO guests (nome, cognome, residente, data_nascita, numero_famigliari, professione, telefono, abilitazione)
-VALUES ('Giuseppe', 'Rezzonico', true, '1986-05-27', 5, 'panificatore', '339151312', true);
+INSERT INTO guests (nome, cognome, residente, data_nascita, nazionalita, numero_famigliari, professione, telefono, abilitazione)
+VALUES ('Giuseppe', 'Rezzonico', true, '1986-05-27', 'Italiana', 5, 'panificatore', '339151312', true);
 
 -- 7. GUEST MAPPINGS
 INSERT INTO guest_meal (guest_id, meal_type, ricevimento_pasto) VALUES (1, 'Standard', 'mensa');

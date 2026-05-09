@@ -46,14 +46,14 @@ app.get('/users', async (req, res) => {
 app.get('/guests', async (req, res) => {
     const query = `
         SELECT 
-            g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numero_famigliari, g.professione, g.telefono, e.nome AS entity_name, 
+            g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.nazionalita, g.numero_famigliari, g.professione, g.telefono, e.nome AS entity_name, 
             ARRAY_AGG(DISTINCT gm.meal_type ) AS guest_meal 
         FROM guests g 
         LEFT JOIN guest_meal gm ON g.id = gm.guest_id
         LEFT JOIN meal_types mt ON gm.meal_type = mt.tipo 
         LEFT JOIN guest_entity ge ON g.id = ge.guest_id
         LEFT JOIN entities e ON ge.entity_id = e.id
-        GROUP BY g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numero_famigliari, g.professione,g.telefono,e.nome;
+        GROUP BY g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.nazionalita, g.numero_famigliari, g.professione,g.telefono,e.nome;
     `;
     const queryResults = await pool.query(query);
     res.json(queryResults.rows);
@@ -71,10 +71,12 @@ app.get('/guests/:id', async (req, res) => {
             g.cognome,
             g.residente,
             g.data_nascita,
+            g.nazionalita,
             g.numero_famigliari,
             g.professione,
             g.telefono,
             e.nome AS entity_name,
+            s.nome AS site_name,
             COALESCE(
                 JSON_AGG(
                     DISTINCT JSONB_BUILD_OBJECT(
@@ -89,8 +91,10 @@ app.get('/guests/:id', async (req, res) => {
         LEFT JOIN guest_meal gm ON g.id = gm.guest_id
         LEFT JOIN guest_entity ge ON g.id = ge.guest_id
         LEFT JOIN entities e ON ge.entity_id = e.id
+        LEFT JOIN guest_site gs ON g.id = gs.guest_id
+        LEFT JOIN sites s ON gs.site_id = s.id
         WHERE g.id = $1
-        GROUP BY g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.numero_famigliari, g.professione, g.telefono, e.nome;
+        GROUP BY g.id, g.nome, g.cognome, g.residente, g.data_nascita, g.nazionalita, g.numero_famigliari, g.professione, g.telefono, e.nome, s.nome;
     `;
 
     const queryResults = await pool.query(query, [id]);
@@ -254,6 +258,7 @@ app.post('/guests', async (req, res) => {
         const cognome = pickFirst(req.body.surname, req.body.cognome, '').trim();
         const residente = Boolean(req.body.resident ?? req.body.residente);
         const data_nascita = pickFirst(req.body.birthDate, req.body.dataDiNascita, req.body.data_nascita);
+        const nazionalita = String(pickFirst(req.body.nationality, req.body.nazionalita, '')).trim();
         const numero_famigliari = Number(pickFirst(req.body.familyCount, req.body.numeroFamiliari, req.body.numero_famigliari, 0));
         const professione = pickFirst(req.body.profession, req.body.professione, '').trim();
         const telefono = String(pickFirst(req.body.phone, req.body.telefono, '')).trim();
@@ -261,9 +266,14 @@ app.post('/guests', async (req, res) => {
         const siteName = String(pickFirst(req.body.siteName, req.body.puntoDistribuzione, '')).trim();
         const meals = Array.isArray(req.body.meals) ? req.body.meals : [];
 
-        if (!nome || !cognome || !data_nascita || !professione || !telefono || !entityName || !siteName) {
+        if (!nome || !cognome || !data_nascita || !nazionalita || !professione || !telefono || !entityName || !siteName) {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'Missing required guest fields' });
+        }
+
+        if (!Number.isFinite(numero_famigliari) || numero_famigliari < 1) {
+            await client.query('ROLLBACK');
+            return res.status(400).json({ error: 'Family count must be at least 1' });
         }
 
         if (meals.length === 0) {
@@ -272,10 +282,10 @@ app.post('/guests', async (req, res) => {
         }
 
         const guestRes = await client.query(
-            `INSERT INTO guests (nome, cognome, residente, data_nascita, numero_famigliari, professione, telefono)
-             VALUES ($1, $2, $3, $4, $5, $6, $7)
+            `INSERT INTO guests (nome, cognome, residente, data_nascita, nazionalita, numero_famigliari, professione, telefono)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
              RETURNING *`,
-            [nome, cognome, residente, data_nascita, numero_famigliari, professione, telefono]
+            [nome, cognome, residente, data_nascita, nazionalita, numero_famigliari, professione, telefono]
         );
 
         const guest = guestRes.rows[0];
@@ -385,6 +395,7 @@ app.patch('/guests/:id', async (req, res) => {
         const cognome = String(pickFirst(req.body.surname, req.body.cognome, currentGuest.cognome)).trim();
         const residente = Boolean(pickFirst(req.body.resident, req.body.residente, currentGuest.residente));
         const data_nascita = pickFirst(req.body.birthDate, req.body.dataDiNascita, req.body.data_nascita, currentGuest.data_nascita);
+        const nazionalita = String(pickFirst(req.body.nationality, req.body.nazionalita, currentGuest.nazionalita)).trim();
         const numero_famigliari = Number(pickFirst(req.body.familyCount, req.body.numeroFamiliari, req.body.numero_famigliari, currentGuest.numero_famigliari));
         const professione = String(pickFirst(req.body.profession, req.body.professione, currentGuest.professione)).trim();
         const telefono = String(pickFirst(req.body.phone, req.body.telefono, currentGuest.telefono)).trim();
@@ -403,14 +414,14 @@ app.patch('/guests/:id', async (req, res) => {
             }))
             : (Array.isArray(mealsInput) ? mealsInput : []);
 
-        if (!nome || !cognome || !data_nascita || !professione || !telefono || !entityName || !siteName) {
+        if (!nome || !cognome || !data_nascita || !nazionalita || !professione || !telefono || !entityName || !siteName) {
             await client.query('ROLLBACK');
             return res.status(400).json({ error: 'Missing required guest fields' });
         }
 
-        if (Number.isNaN(numero_famigliari)) {
+        if (!Number.isFinite(numero_famigliari) || numero_famigliari < 1) {
             await client.query('ROLLBACK');
-            return res.status(400).json({ error: 'Invalid family count' });
+            return res.status(400).json({ error: 'Family count must be at least 1' });
         }
 
         if (meals.length === 0) {
@@ -444,12 +455,13 @@ app.patch('/guests/:id', async (req, res) => {
                  cognome = $2,
                  residente = $3,
                  data_nascita = $4,
-                 numero_famigliari = $5,
-                 professione = $6,
-                 telefono = $7
-             WHERE id = $8
+                 nazionalita = $5,
+                 numero_famigliari = $6,
+                 professione = $7,
+                 telefono = $8
+             WHERE id = $9
              RETURNING *`,
-            [nome, cognome, residente, data_nascita, numero_famigliari, professione, telefono, id]
+            [nome, cognome, residente, data_nascita, nazionalita, numero_famigliari, professione, telefono, id]
         );
 
         await client.query('DELETE FROM guest_entity WHERE guest_id = $1', [id]);
@@ -723,6 +735,33 @@ app.delete('/users/:id', async (req, res) => {
     } finally {
         client.release();
     }
+});
+
+//restituisce ricette e prodotti associati
+app.get('/api/recipes/requirements', async (req, res) => {
+  try {
+    const query = `
+      SELECT 
+        rp.recipe_id AS "recipeId",
+        r.nome AS "recipeName",
+        rp.product_id AS "productId",
+        p.nome AS "productName",
+        rp.quantita_per_pasto AS "quantityPerMeal",
+        p.unita_di_misura AS "unit"
+      FROM piuzuppa.recipe_product rp
+      JOIN piuzuppa.recipes r ON rp.recipe_id = r.id
+      JOIN piuzuppa.products p ON rp.product_id = p.id
+    `;
+
+    const { rows } = await pool.query(query);
+
+    // Inviamo l'array di oggetti direttamente
+    res.status(200).json(rows);
+    
+  } catch (error) {
+    console.error("Errore fetch requirements:", error);
+    res.status(500).json({ error: "Errore nel caricamento dei requisiti ricette" });
+  }
 });
 
 //"type":"commonjs" in fondo alla pagina obbligatorio
